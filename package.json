@@ -1,0 +1,15 @@
+{
+  "name": "living-world-poc",
+  "version": "0.2.0",
+  "description": "Phase 2: AI characters with persistent Postgres+pgvector memory and reflection, powered by Cloudflare Workers AI",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "pg": "^8.13.1"
+  }
+}
