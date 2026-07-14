@@ -3,6 +3,7 @@ const http = require('http');
 const path = require('path');
 const { WebSocketServer } = require('ws');
 const { getRecentMemories } = require('./memoryStore');
+const { LOCATIONS } = require('./locations');
 
 // Wires up the HTTP server (serves the Phaser frontend + a small REST API
 // for the inspector panel) and a WebSocket server (pushes tick updates).
@@ -10,6 +11,12 @@ const { getRecentMemories } = require('./memoryStore');
 function createServer(agents) {
   const app = express();
   app.use(express.static(path.join(__dirname, '..', 'public')));
+
+  // Static reference data for the frontend to draw landmarks — fetched once
+  // on load, not part of the per-tick broadcast.
+  app.get('/api/locations', (req, res) => {
+    res.json(LOCATIONS);
+  });
 
   app.get('/api/agents', (req, res) => {
     res.json(agents.map((a) => ({ name: a.name, persona: a.persona, color: a.color })));
@@ -29,6 +36,7 @@ function createServer(agents) {
         name: agent.name,
         persona: agent.persona,
         plan: agent.currentPlan,
+        location: agent.location,
         memories: rows.map((m) => ({ type: m.type, content: m.content, createdAt: m.created_at })),
       });
     } catch (err) {

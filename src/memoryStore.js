@@ -31,6 +31,16 @@ async function getRecentMemories(agentId, limit = 5) {
   return rows;
 }
 
+async function getRecentMemoriesByType(agentId, type, limit = 5) {
+  const { rows } = await pool.query(
+    `SELECT id, type, content, importance, created_at
+     FROM memories WHERE agent_id = $1 AND type = $2
+     ORDER BY created_at DESC LIMIT $3`,
+    [agentId, type, limit]
+  );
+  return rows;
+}
+
 async function getRelevantMemories(agentId, situationText, limit = 5) {
   const vector = await embed(situationText);
   const { rows } = await pool.query(
@@ -100,6 +110,7 @@ async function countSinceLastReflection(agentId) {
 module.exports = {
   addMemory,
   getRecentMemories,
+  getRecentMemoriesByType,
   getRelevantMemories,
   getBlendedMemories,
   countSinceLastReflection,

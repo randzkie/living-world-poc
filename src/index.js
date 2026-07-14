@@ -2,57 +2,46 @@ const config = require('./config');
 const { pool } = require('./db');
 const { World } = require('./world');
 const { Agent } = require('./agents');
+const { LOCATIONS } = require('./locations');
 const { createServer } = require('./server');
 
-// Phase 4: same three characters, now with a live browser view. Each has a
-// "home" position in a simple town-square layout and a color for the canvas.
-// This is illustrative (not real pathfinding) — Phase 3's real map/movement
-// is still on the roadmap.
-const AGENT_LAYOUT = {
-  Mira: { x: 200, y: 320, color: '#4f9d8a' },
-  Tomas: { x: 560, y: 180, color: '#a24b52' },
-  Elyas: { x: 400, y: 420, color: '#8b6bc4' },
-};
-
-const agents = [
-  new Agent({
-    name: 'Mira',
+const AGENT_SETUP = {
+  Mira: {
+    homeLocation: 'Map Stand',
+    color: '#4f9d8a',
     persona:
       'A curious street vendor who sells old maps. Friendly but nosy, always asking questions about strangers.',
-  }),
-  new Agent({
-    name: 'Tomas',
+  },
+  Tomas: {
+    homeLocation: 'Guard Post',
+    color: '#a24b52',
     persona:
       'A tired night guard who has worked this post for 20 years. Gruff, dry humor, secretly lonely.',
-  }),
-  new Agent({
-    name: 'Elyas',
+  },
+  Elyas: {
+    homeLocation: 'Tavern',
+    color: '#8b6bc4',
     persona:
       'A traveling bard collecting local rumors and stories for his next song. Charming, nosy in a different way than Mira, easily distracted by anything interesting.',
-  }),
-];
+  },
+};
+
+const agents = Object.entries(AGENT_SETUP).map(
+  ([name, setup]) => new Agent({ name, persona: setup.persona, homeLocation: setup.homeLocation })
+);
 
 for (const agent of agents) {
-  const layout = AGENT_LAYOUT[agent.name] || { x: 400, y: 300, color: '#999999' };
-  agent.x = layout.x;
-  agent.y = layout.y;
-  agent.color = layout.color;
+  const setup = AGENT_SETUP[agent.name];
+  agent.color = setup.color;
+  const pos = LOCATIONS[agent.homeLocation];
+  agent.x = pos.x;
+  agent.y = pos.y;
 }
 
 const world = new World();
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-// Small illustrative wander around each agent's home spot when it "moves" —
-// not real pathfinding, just enough to make the canvas feel alive.
-function jitterPosition(agent) {
-  const home = AGENT_LAYOUT[agent.name];
-  const dx = (Math.random() - 0.5) * 120;
-  const dy = (Math.random() - 0.5) * 80;
-  agent.x = Math.max(60, Math.min(740, home.x + dx));
-  agent.y = Math.max(60, Math.min(440, home.y + dy));
 }
 
 async function checkDatabaseReady() {
@@ -94,10 +83,15 @@ async function runTick(tickNumber, broadcast) {
   for (const agent of agents) {
     try {
       const result = await agent.act(world);
-      if (result.action === 'move') jitterPosition(agent);
+
+      // Location is now the real source of truth for position — no more
+      // random jitter, the canvas coordinates come straight from LOCATIONS.
+      const pos = LOCATIONS[agent.location];
+      agent.x = pos.x;
+      agent.y = pos.y;
 
       const dialogue = result.dialogue ? ` — "${result.dialogue}"` : '';
-      console.log(`${agent.name}: ${result.action}${dialogue}`);
+      console.log(`${agent.name} @ ${agent.location}: ${result.action}${dialogue}`);
       console.log(`  (plan: ${agent.currentPlan})`);
 
       tickAgentStates.push({
@@ -105,6 +99,7 @@ async function runTick(tickNumber, broadcast) {
         x: agent.x,
         y: agent.y,
         color: agent.color,
+        location: agent.location,
         action: result.action,
         dialogue: result.dialogue,
         plan: agent.currentPlan,
@@ -116,6 +111,7 @@ async function runTick(tickNumber, broadcast) {
         x: agent.x,
         y: agent.y,
         color: agent.color,
+        location: agent.location,
         action: 'error',
         dialogue: '',
         plan: agent.currentPlan,
@@ -131,6 +127,7 @@ async function main() {
 
   for (const agent of agents) {
     await agent.init();
+    world.setAgentLocation(agent.name, agent.location);
   }
 
   const { server, broadcast } = createServer(agents);

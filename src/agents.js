@@ -7,38 +7,40 @@ const {
   countSinceLastReflection,
 } = require('./memoryStore');
 const { reflect } = require('./reflection');
+const { LOCATIONS } = require('./locations');
 const config = require('./config');
 
-// With more agents, the shared event log fills up faster with everyone else's
-// actions — widen the windows so nobody "forgets" what just happened after
-// only one or two ticks.
 const PERCEPTION_WINDOW = 8;
 const MEMORY_WINDOW = 6;
 
+const LOCATION_LIST_TEXT = Object.entries(LOCATIONS)
+  .map(([name, loc]) => `- ${name}: ${loc.description}`)
+  .join('\n');
+
 class Agent {
-  constructor({ name, persona }) {
-    this.id = null; // set by init(), once we know the persisted DB id
+  constructor({ name, persona, homeLocation }) {
+    this.id = null;
     this.name = name;
     this.persona = persona;
+    this.homeLocation = homeLocation;
+    this.location = homeLocation;
     this.currentPlan = '(no plan yet)';
   }
 
-  // Must be called once before act() — looks up or creates this agent's row
-  // in Postgres so memory persists across process restarts.
   async init() {
     this.id = await ensureAgent(this.name, this.persona);
   }
 
   async buildPrompt(world) {
-    const perceivedEvents = world.formatRecentEventsExcluding(this.name, PERCEPTION_WINDOW);
+    const peopleHere = world.getAgentsAt(this.location, this.name);
+    const eventsHere = world.formatRecentEventsAt(this.location, this.name, PERCEPTION_WINDOW);
 
-    // The most recent own action, fetched directly (not from the blended set)
-    // so the anti-repetition check always compares against the true last line,
-    // even if relevance/importance scoring would have ranked it lower.
-    const lastOwnRows = await getRecentMemories(this.id, 1);
-    const lastOwnText = lastOwnRows[0] ? lastOwnRows[0].content : '(nothing yet — this is your first move)';
+    const lastOwnRows = await getRecentMemories(this.id, 4);
+    const lastOwnText = lastOwnRows.length
+      ? lastOwnRows.map((r) => `- ${r.content}`).join('\n')
+      : '(nothing yet — this is your first move)';
 
-    const situationText = `${perceivedEvents}\nCurrent plan: ${this.currentPlan}`;
+    const situationText = `At ${this.location}. ${eventsHere}\nCurrent plan: ${this.currentPlan}`;
     const blended = await getBlendedMemories(this.id, situationText, MEMORY_WINDOW);
     const ownMemoriesText = blended.length
       ? blended.map((m) => `- [${m.type}] ${m.content}`).join('\n')
@@ -47,22 +49,33 @@ class Agent {
     return [
       {
         role: 'system',
-        content: `You are roleplaying as a character named ${this.name} inside a small simulated world.
+        content: `You are roleplaying as a character named ${this.name} inside a small simulated town.
 Persona: ${this.persona}
 
-You only know what is written below. You have no knowledge of the world beyond this.
+You only know what is written below. You have no knowledge of the town beyond this.
 Stay fully in character.
-IMPORTANT: Never repeat your previous dialogue or action almost word-for-word. If a topic feels resolved, stuck, or you already said something similar recently, change the subject, actually answer a question you were asked, or switch to a different action (move, wait, interact) instead of repeating yourself.
+IMPORTANT: Never repeat your previous dialogue or action almost word-for-word. If a topic feels resolved, stuck, or you already said something similar recently, change the subject, actually answer a question you were asked, or switch to a different action instead of repeating yourself.
+
+The town has these locations:
+${LOCATION_LIST_TEXT}
+
+You can only see and hear what happens at your current location — nothing from
+elsewhere in town reaches you. To go somewhere else, use action "move" with
+target set to EXACTLY one of the location names above (not your current location).
+
 Respond ONLY with valid JSON, no extra text, in this exact shape:
-{"action": "speak|move|wait|interact", "target": "who or what, or empty string", "dialogue": "what you say out loud, or empty string", "plan": "your next intention in one short sentence, updated from your current plan", "reason": "one short sentence, your private reasoning"}`,
+{"action": "speak|move|wait|interact", "target": "a location name if moving, a person's name if speaking to them, or empty string", "dialogue": "what you say out loud, or empty string", "plan": "your next intention in one short sentence, updated from your current plan", "reason": "one short sentence, your private reasoning"}`,
       },
       {
         role: 'user',
-        content: `Your last action was: ${lastOwnText}
-(Do not repeat this almost word-for-word — say or do something meaningfully different.)
+        content: `You are currently at: ${this.location}
+People here with you right now: ${peopleHere.length ? peopleHere.join(', ') : '(no one else)'}
 
-Recent things you noticed nearby:
-${perceivedEvents}
+Things you already said or did recently — do not repeat any of these almost word-for-word:
+${lastOwnText}
+
+Recent things that happened here:
+${eventsHere}
 
 Relevant memories (a mix of recent, important, and related to your current situation):
 ${ownMemoriesText}
@@ -91,7 +104,6 @@ Decide what you do right now.`,
       };
     }
 
-    // Defensive defaults — free/small models sometimes omit a field or two.
     if (!parsed.action) parsed.action = parsed.dialogue ? 'speak' : 'wait';
     parsed.target = parsed.target || '';
     parsed.dialogue = parsed.dialogue || '';
@@ -101,16 +113,30 @@ Decide what you do right now.`,
       this.currentPlan = parsed.plan;
     }
 
+    // Movement is now real: the target must be a valid location that isn't
+    // where the agent already is. Anything else falls back to "wait" rather
+    // than silently teleporting or ignoring a bad destination.
+    if (parsed.action === 'move') {
+      if (parsed.target && LOCATIONS[parsed.target] && parsed.target !== this.location) {
+        this.location = parsed.target;
+      } else {
+        parsed.action = 'wait';
+        if (!parsed.reason || parsed.reason === 'testing') {
+          parsed.reason = '(tried to move but gave no valid new destination)';
+        }
+      }
+    }
+
+    world.setAgentLocation(this.name, this.location);
+
     const description = parsed.dialogue
       ? `${parsed.action} — "${parsed.dialogue}"`
-      : `${parsed.action}${parsed.target ? ' toward ' + parsed.target : ''}`;
+      : `${parsed.action}${parsed.action === 'move' ? ' to ' + this.location : ''}`;
 
     const memoryType = parsed.dialogue ? 'dialogue' : 'action';
     await addMemory(this.id, memoryType, description);
-    world.addEvent(this.name, description);
+    world.addEvent(this.name, this.location, description);
 
-    // Check if it's time to reflect — this is what lets the agent notice
-    // "I already offered this twice" instead of just repeating recent lines.
     const sinceReflection = await countSinceLastReflection(this.id);
     if (sinceReflection >= config.REFLECTION_EVERY) {
       const insights = await reflect(this);

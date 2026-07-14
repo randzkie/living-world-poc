@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Living World</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link
+  href="https://fonts.googleapis.com/css2?family=Spectral:wght@500;600&family=Inter:wght@400;500;600&display=swap"
+  rel="stylesheet"
+/>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>Living World</h1>
+    <div class="status">
+      <span id="tickCount">tick 0</span>
+      <span id="connDot" class="dot"></span>
+      <span id="connLabel">connecting…</span>
+    </div>
+  </header>
+
+  <main class="layout">
+    <div id="gameContainer" class="stage"></div>
+    <aside id="inspector" class="inspector">
+      <div class="inspector-empty">Click a character to see their thoughts.</div>
+    </aside>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
+  <script src="main.js"></script>
+</body>
+</html>
