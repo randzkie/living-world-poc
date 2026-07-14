@@ -3,32 +3,59 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Living World</title>
+<title>Living World — Aetheria Style</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
-<link
-  href="https://fonts.googleapis.com/css2?family=Spectral:wght@500;600&family=Inter:wght@400;500;600&display=swap"
-  rel="stylesheet"
-/>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <header class="topbar">
-    <h1>Living World</h1>
+    <div class="brand">
+      <div class="brand-icon">Æ</div>
+      <div>
+        <h1>Living World</h1>
+        <p class="subtitle">AI characters with persistent memory &amp; reflection</p>
+      </div>
+    </div>
     <div class="status">
-      <span id="tickCount">tick 0</span>
-      <span id="connDot" class="dot"></span>
-      <span id="connLabel">connecting…</span>
+      <span id="tickCount" class="tick-badge">tick 0</span>
+      <span class="status-pill" id="connPill">
+        <span id="connDot" class="dot"></span>
+        <span id="connLabel">connecting…</span>
+      </span>
     </div>
   </header>
 
   <main class="layout">
-    <div id="gameContainer" class="stage"></div>
+    <div class="stage-wrap">
+      <div class="card-header-red">
+        <span>THE VILLAGE MAP</span>
+        <span class="hint">Click a character to see their mind</span>
+      </div>
+      <div id="gameContainer" class="stage">
+        <canvas id="gameCanvas" width="800" height="500"></canvas>
+      </div>
+
+      <div class="card-header-red" style="margin-top:12px">
+        <span>CHARACTERS</span>
+        <span class="hint" id="charCount">0 villagers</span>
+      </div>
+      <div id="charCards" class="char-cards"></div>
+    </div>
+
     <aside id="inspector" class="inspector">
-      <div class="inspector-empty">Click a character to see their thoughts.</div>
+      <div class="card-header-red">
+        <span>CHARACTER DETAILS</span>
+      </div>
+      <div id="inspectorBody" class="inspector-body">
+        <div class="inspector-empty">
+          <div class="empty-icon">👁</div>
+          <p>Click a character on the map to see their stats, plan, and memories.</p>
+        </div>
+      </div>
     </aside>
   </main>
 
-  <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
   <script src="main.js"></script>
 </body>
 </html>
