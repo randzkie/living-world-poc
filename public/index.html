@@ -3,72 +3,53 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Living World — Aetheria RPG</title>
+<title>Living World</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link
+  href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Spectral:wght@400;500;600&display=swap"
+  rel="stylesheet"
+/>
 <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <header class="topbar">
     <div class="brand">
-      <div class="brand-icon">Æ</div>
+      <span class="brand-icon">🛡️</span>
       <div>
-        <h1>Aetheria</h1>
-        <p class="subtitle">A living world of AI characters</p>
+        <h1>Living World</h1>
+        <p class="tagline">A small medieval town of villagers with their own senses and memory</p>
       </div>
     </div>
     <div class="status">
-      <span id="tickCount" class="tick-badge">⏱ tick 0</span>
-      <span id="timeBadge" class="tick-badge">☀ 6:00</span>
-      <span class="status-pill" id="connPill">
-        <span id="connDot" class="dot"></span>
-        <span id="connLabel">connecting…</span>
-      </span>
+      <span id="tickCount">tick 0</span>
+      <span id="connDot" class="dot"></span>
+      <span id="connLabel">connecting…</span>
     </div>
   </header>
 
   <main class="layout">
-    <div class="stage-wrap">
-      <div class="card-header-red">
-        <span>⚔ THE VILLAGE OF AETHERIA</span>
-        <span class="hint">Scroll to zoom · Drag to pan · Click a character</span>
-      </div>
-      <div id="gameContainer" class="stage">
-        <canvas id="gameCanvas" width="1000" height="640"></canvas>
-        <!-- Zoom controls -->
-        <div class="zoom-controls">
-          <button id="zoomIn" title="Zoom in">+</button>
-          <button id="zoomOut" title="Zoom out">−</button>
-          <button id="zoomReset" title="Reset view">⊙</button>
-        </div>
-        <!-- Minimap -->
-        <div id="minimap" class="minimap">
-          <canvas id="minimapCanvas" width="180" height="120"></canvas>
-        </div>
-        <!-- Agent count badge -->
-        <div id="agentBadge" class="agent-badge">0 characters</div>
-      </div>
-
-      <div class="card-header-red" style="margin-top:10px">
-        <span>⚔ CHARACTERS</span>
-        <span class="hint" id="charCount">0 villagers</span>
-      </div>
-      <div id="charCards" class="char-cards"></div>
-    </div>
-
+    <div id="gameContainer" class="stage"></div>
     <aside id="inspector" class="inspector">
-      <div class="card-header-red">
-        <span>⚔ CHARACTER DETAILS</span>
-      </div>
-      <div id="inspectorBody" class="inspector-body">
-        <div class="inspector-empty">
-          <div class="empty-icon">👁</div>
-          <p>Click a character on the map to see their stats, plan, and memories.</p>
-        </div>
+      <div class="inspector-empty">
+        <span class="inspector-icon">👁️</span>
+        Click a villager to see their thoughts, plan, and memories.
       </div>
     </aside>
   </main>
 
+  <section class="chronicle-panel">
+    <h2>Village Chronicle</h2>
+    <ul id="chronicle" class="chronicle-list">
+      <li class="chronicle-empty">Waiting for the first events…</li>
+    </ul>
+  </section>
+
+  <section class="roster-panel">
+    <h2>Townsfolk</h2>
+    <div id="roster" class="roster-grid"></div>
+  </section>
+
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
   <script src="main.js"></script>
 </body>
 </html>

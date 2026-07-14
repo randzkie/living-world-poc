@@ -1,18 +1,3 @@
-/**
- * Updated index.js — 8 characters instead of 3, each with unique identity.
- * Replace src/index.js with this file.
- *
- * Characters:
- *   Mira   — Map Seller (curious, nosy, friendly)
- *   Tomas  — Night Guard (tired, gruff, lonely)
- *   Elyas  — Traveling Bard (charming, distracted, collects rumors)
- *   Sable  — Apothecary (mysterious, sarcastic, dark humor)
- *   Thorne — Blacksmith (stoic, strong, slow to anger)
- *   Wren   — Farmer (honest, simple, spiritual)
- *   Corvin — Merchant (cunning, smooth-talking, opportunistic)
- *   Lyra   — Musician (theatrical, flirtatious, insecure)
- */
-
 const config = require('./config');
 const { pool } = require('./db');
 const { World } = require('./world');
@@ -22,52 +7,25 @@ const { createServer } = require('./server');
 
 const AGENT_SETUP = {
   Mira: {
-    homeLocation: 'Map Stand',
+    homeLocation: "Cartographer's Stall",
     color: '#4f9d8a',
+    role: 'Map Seller',
     persona:
       'A curious street vendor who sells old maps. Friendly but nosy, always asking questions about strangers.',
   },
   Tomas: {
-    homeLocation: 'Guard Post',
+    homeLocation: 'The Watchtower',
     color: '#a24b52',
+    role: 'Town Guard',
     persona:
       'A tired night guard who has worked this post for 20 years. Gruff, dry humor, secretly lonely.',
   },
   Elyas: {
-    homeLocation: 'Tavern',
+    homeLocation: 'The Weary Boar',
     color: '#8b6bc4',
+    role: 'Traveling Bard',
     persona:
       'A traveling bard collecting local rumors and stories for his next song. Charming, nosy in a different way than Mira, easily distracted by anything interesting.',
-  },
-  Sable: {
-    homeLocation: 'Apothecary',
-    color: '#6a1b9a',
-    persona:
-      'A mysterious apothecary from the eastern deserts. Practices alchemy that some find unsettling. Sarcastic, intelligent, darkly funny. Pushes people away to test who stays.',
-  },
-  Thorne: {
-    homeLocation: 'Blacksmith',
-    color: '#424242',
-    persona:
-      'A stoic blacksmith who forged weapons for the royal guard for 20 years. Slow to anger but terrifying when mad. Values craftsmanship and honesty above all else.',
-  },
-  Wren: {
-    homeLocation: 'Farm',
-    color: '#7cb342',
-    persona:
-      'A simple farmer born in this village who never left. Tends the wheat fields. Speaks to the crops like old friends. Honest, hardworking, deeply spiritual.',
-  },
-  Corvin: {
-    homeLocation: 'Market',
-    color: '#1e88e5',
-    persona:
-      'A self-made merchant from the capital with a shadowy past. Cunning, smooth-talking, opportunistic. Suspected of smuggling but never caught. Values gold above all.',
-  },
-  Lyra: {
-    homeLocation: 'Tavern',
-    color: '#ec407a',
-    persona:
-      'A runaway noblewoman who reinvented herself as a wandering musician. Charming, theatrical, flirtatious, secretly insecure. Craves attention. Lies to seem more interesting.',
   },
 };
 
@@ -78,6 +36,7 @@ const agents = Object.entries(AGENT_SETUP).map(
 for (const agent of agents) {
   const setup = AGENT_SETUP[agent.name];
   agent.color = setup.color;
+  agent.role = setup.role;
   const pos = LOCATIONS[agent.homeLocation];
   agent.x = pos.x;
   agent.y = pos.y;
@@ -129,6 +88,8 @@ async function runTick(tickNumber, broadcast) {
     try {
       const result = await agent.act(world);
 
+      // Location is now the real source of truth for position — no more
+      // random jitter, the canvas coordinates come straight from LOCATIONS.
       const pos = LOCATIONS[agent.location];
       agent.x = pos.x;
       agent.y = pos.y;
