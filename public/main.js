@@ -1,231 +1,11 @@
-const WORLD_WIDTH = 800;
-const WORLD_HEIGHT = 460;
-
-let scene;
-const sprites = {}; // name -> sprite bundle
-const rosterLocationEls = {}; // name -> DOM element showing "at X"
-
+/* global VillageWorld */
 const chronicleEntries = [];
 const CHRONICLE_MAX = 40;
+const rosterLocationEls = {};
 
-// Worn dirt paths radiating from the well, drawn under everything else —
-// a cheap, no-assets way to make the layout read as a real town rather than
-// scattered icons. (Tilemap-style ground detail, just procedurally drawn.)
-function drawPaths(targetScene, locations) {
-  const hub = locations['The Old Well'];
-  if (!hub) return;
-  const g = targetScene.add.graphics();
+let village;
 
-  g.lineStyle(14, 0xcbb37a, 0.45);
-  Object.entries(locations).forEach(([name, loc]) => {
-    if (name === 'The Old Well') return;
-    g.beginPath();
-    g.moveTo(hub.x, hub.y);
-    g.lineTo(loc.x, loc.y);
-    g.strokePath();
-  });
-
-  g.lineStyle(3, 0xe4d3a0, 0.5);
-  Object.entries(locations).forEach(([name, loc]) => {
-    if (name === 'The Old Well') return;
-    g.beginPath();
-    g.moveTo(hub.x, hub.y);
-    g.lineTo(loc.x, loc.y);
-    g.strokePath();
-  });
-}
-
-// Original iconography per location — heraldic wine/gold on stone-grey,
-// no external art assets. Icon choice matches each location's flavor.
-function drawLocationMarker(targetScene, name, loc) {
-  const { x, y } = loc;
-  const g = targetScene.add.graphics();
-  g.lineStyle(2, 0x6b1f2a, 0.75);
-  g.fillStyle(0x2b2013, 0.16);
-
-  if (name === "Cartographer's Stall") {
-    g.fillRoundedRect(x - 32, y - 14, 64, 28, 4);
-    g.strokeRoundedRect(x - 32, y - 14, 64, 28, 4);
-    g.lineStyle(2, 0xb8860b, 0.8);
-    g.beginPath();
-    g.moveTo(x - 18, y - 2);
-    g.lineTo(x + 18, y - 6);
-    g.strokePath();
-  } else if (name === 'The Watchtower') {
-    g.beginPath();
-    g.moveTo(x, y - 30);
-    g.lineTo(x - 22, y + 14);
-    g.lineTo(x + 22, y + 14);
-    g.closePath();
-    g.fillPath();
-    g.strokePath();
-    // small pennant
-    g.fillStyle(0x6b1f2a, 0.9);
-    g.beginPath();
-    g.moveTo(x, y - 30);
-    g.lineTo(x + 16, y - 26);
-    g.lineTo(x, y - 22);
-    g.closePath();
-    g.fillPath();
-  } else if (name === 'The Weary Boar') {
-    g.beginPath();
-    g.moveTo(x, y - 24);
-    g.lineTo(x - 26, y + 16);
-    g.lineTo(x + 26, y + 16);
-    g.closePath();
-    g.fillPath();
-    g.strokePath();
-    // hanging tavern sign
-    g.lineStyle(2, 0x6b1f2a, 0.7);
-    g.strokeCircle(x, y - 40, 8);
-  } else if (name === 'Market Row') {
-    g.fillRoundedRect(x - 34, y - 8, 68, 20, 3);
-    g.strokeRoundedRect(x - 34, y - 8, 68, 20, 3);
-    g.lineStyle(2, 0x6b1f2a, 0.9);
-    g.beginPath();
-    g.moveTo(x - 34, y - 8);
-    g.lineTo(x, y - 24);
-    g.lineTo(x + 34, y - 8);
-    g.strokePath();
-  } else if (name === 'The Old Well') {
-    g.strokeCircle(x, y, 26);
-    g.strokeCircle(x, y, 15);
-  } else {
-    g.strokeCircle(x, y, 20);
-  }
-
-  targetScene.add
-    .text(x, y + 42, name, { fontFamily: 'Cinzel', fontSize: '11px', color: '#4a3a24' })
-    .setOrigin(0.5);
-
-  // Signature ambient touch: an organic, flickering torch glow at the
-  // watchtower — a chain of short randomized tweens instead of a clean
-  // mechanical pulse, so it reads more like real firelight.
-  if (name === 'The Watchtower') {
-    g.fillStyle(0x2b2013, 0.6);
-    g.fillRect(x - 3, y - 44, 6, 14);
-
-    const glow = targetScene.add.circle(x, y - 44, 34, 0xd9a441, 0.22);
-    function flicker() {
-      targetScene.tweens.add({
-        targets: glow,
-        alpha: 0.12 + Math.random() * 0.24,
-        scale: 0.85 + Math.random() * 0.4,
-        duration: 140 + Math.random() * 220,
-        ease: 'Sine.easeInOut',
-        onComplete: flicker,
-      });
-    }
-    flicker();
-  }
-}
-
-class TownScene extends Phaser.Scene {
-  constructor(locations) {
-    super('TownScene');
-    this.locations = locations || {};
-  }
-
-  create() {
-    scene = this;
-
-    this.add.rectangle(WORLD_WIDTH / 2, WORLD_HEIGHT / 2, WORLD_WIDTH, WORLD_HEIGHT, 0x7a9b5e);
-    this.add.ellipse(WORLD_WIDTH / 2, WORLD_HEIGHT / 2 + 20, 360, 220, 0x8dae70, 0.5);
-
-    drawPaths(this, this.locations);
-    Object.entries(this.locations).forEach(([name, loc]) => drawLocationMarker(this, name, loc));
-
-    connectWebSocket();
-  }
-}
-
-function ensureSprite(agentState) {
-  if (sprites[agentState.name]) return sprites[agentState.name];
-
-  const colorHex = Phaser.Display.Color.HexStringToColor(agentState.color).color;
-
-  const container = scene.add.container(agentState.x, agentState.y);
-  const circle = scene.add.circle(0, 0, 22, colorHex);
-  circle.setStrokeStyle(2, 0xf5ecd2, 0.9);
-  const nameText = scene.add
-    .text(0, 34, agentState.name, { fontFamily: 'Spectral', fontSize: '15px', fontStyle: '600', color: '#2b2013' })
-    .setOrigin(0.5);
-  const statusText = scene.add
-    .text(0, -34, '', { fontFamily: 'Spectral', fontSize: '11px', color: '#4a3a24' })
-    .setOrigin(0.5);
-
-  container.add([circle, nameText, statusText]);
-
-  circle.setInteractive({ useHandCursor: true });
-  circle.on('pointerdown', () => openInspector(agentState.name));
-  circle.on('pointerover', () => circle.setScale(1.12));
-  circle.on('pointerout', () => circle.setScale(1));
-
-  const bubbleContainer = scene.add.container(agentState.x, agentState.y - 55).setAlpha(0);
-  const bubbleBg = scene.add.graphics();
-  const bubbleText = scene.add
-    .text(0, 0, '', {
-      fontFamily: 'Spectral',
-      fontSize: '13px',
-      color: '#2b2013',
-      wordWrap: { width: 180 },
-      align: 'center',
-    })
-    .setOrigin(0.5);
-  bubbleContainer.add([bubbleBg, bubbleText]);
-
-  const entry = { container, circle, nameText, statusText, bubbleContainer, bubbleBg, bubbleText, lastLocation: null };
-  sprites[agentState.name] = entry;
-  return entry;
-}
-
-function drawBubble(entry, text) {
-  entry.bubbleText.setText(text);
-  const bounds = entry.bubbleText.getBounds();
-  const w = bounds.width + 24;
-  const h = bounds.height + 16;
-
-  entry.bubbleBg.clear();
-  entry.bubbleBg.fillStyle(0xf5ecd2, 0.98);
-  entry.bubbleBg.fillRoundedRect(-w / 2, -h / 2, w, h, 10);
-  entry.bubbleBg.lineStyle(1.5, 0xb8860b, 0.9);
-  entry.bubbleBg.strokeRoundedRect(-w / 2, -h / 2, w, h, 10);
-}
-
-function updateAgent(agentState) {
-  const entry = ensureSprite(agentState);
-  const moved = entry.lastLocation !== null && entry.lastLocation !== agentState.location;
-  entry.lastLocation = agentState.location;
-
-  scene.tweens.add({
-    targets: entry.container,
-    x: agentState.x,
-    y: agentState.y,
-    duration: moved ? 1400 : 700,
-    ease: 'Sine.easeInOut',
-  });
-  scene.tweens.add({
-    targets: entry.bubbleContainer,
-    x: agentState.x,
-    y: agentState.y - 55,
-    duration: moved ? 1400 : 700,
-    ease: 'Sine.easeInOut',
-  });
-
-  if (agentState.dialogue) {
-    drawBubble(entry, agentState.dialogue);
-    entry.bubbleContainer.setAlpha(0).setScale(0.85);
-    scene.tweens.add({ targets: entry.bubbleContainer, alpha: 1, scale: 1, duration: 220, ease: 'Back.easeOut' });
-    scene.time.delayedCall(4500, () => {
-      scene.tweens.add({ targets: entry.bubbleContainer, alpha: 0, duration: 400 });
-    });
-    entry.statusText.setText('');
-  } else if (moved) {
-    entry.statusText.setText(`walks to ${agentState.location}`);
-  } else {
-    entry.statusText.setText(agentState.action === 'wait' ? `waits at ${agentState.location}` : '');
-  }
-}
+const ROLE_AVATAR = { merchant: '🗺️', guard: '🛡️', bard: '🎵' };
 
 // --- Village Chronicle ---
 
@@ -255,7 +35,7 @@ function renderChronicle() {
     .join('');
 }
 
-// --- Townsfolk roster ---
+// --- Character roster ---
 
 function updateRosterLocation(name, loc) {
   const el = rosterLocationEls[name];
@@ -270,13 +50,21 @@ async function loadRoster() {
     container.innerHTML = '';
     list.forEach((a) => {
       const card = document.createElement('div');
-      card.className = 'roster-card';
+      card.className = 'char-card';
+      const stats = a.stats || { hp: 100, atk: 10, def: 10 };
+      const avatar = ROLE_AVATAR[a.npcType] || '👤';
       card.innerHTML = `
-        <span class="roster-dot" style="background:${a.color}"></span>
-        <div>
-          <div class="roster-name">${escapeHtml(a.name)}</div>
-          <div class="roster-role">${escapeHtml(a.role || '')}</div>
-          <div class="roster-location">at ${escapeHtml(a.location || '…')}</div>
+        <div class="char-avatar char-avatar--${escapeHtml(a.npcType || 'merchant')}" style="--accent:${escapeHtml(a.color)}">${avatar}</div>
+        <div class="char-body">
+          <div class="char-name">${escapeHtml(a.name)}</div>
+          <div class="char-role">${escapeHtml(a.role || '')}</div>
+          <div class="char-stats">
+            <span class="stat" title="Health">❤ ${stats.hp}</span>
+            <span class="stat" title="Attack">⚔ ${stats.atk}</span>
+            <span class="stat" title="Defense">🛡 ${stats.def}</span>
+          </div>
+          <p class="char-blurb">${escapeHtml(a.blurb || a.persona || '')}</p>
+          <div class="char-location roster-location">at ${escapeHtml(a.location || '…')}</div>
         </div>
       `;
       card.addEventListener('click', () => openInspector(a.name));
@@ -288,12 +76,12 @@ async function loadRoster() {
   }
 }
 
-// --- WebSocket + tick handling ---
+// --- WebSocket ---
 
 function handleTick(state) {
   document.getElementById('tickCount').textContent = `tick ${state.tick}`;
   state.agents.forEach((agentState) => {
-    updateAgent(agentState);
+    village.updateAgent(agentState);
     updateRosterLocation(agentState.name, agentState.location);
 
     if (agentState.dialogue) {
@@ -331,10 +119,10 @@ function connectWebSocket() {
   });
 }
 
-// --- Inspector panel ---
+// --- Inspector ---
 
 function renderInspector(data) {
-  const panel = document.getElementById('inspector');
+  const panel = document.getElementById('inspector-body');
   const memoriesHtml = data.memories.length
     ? data.memories
         .map(
@@ -359,8 +147,14 @@ function renderInspector(data) {
 }
 
 async function openInspector(name) {
-  const panel = document.getElementById('inspector');
+  const panel = document.getElementById('inspector-body');
   panel.innerHTML = '<div class="inspector-loading">Reading their thoughts…</div>';
+  document.querySelectorAll('.char-card').forEach((c) => c.classList.remove('selected'));
+  const card = [...document.querySelectorAll('.char-card')].find(
+    (c) => c.querySelector('.char-name')?.textContent === name
+  );
+  if (card) card.classList.add('selected');
+
   try {
     const res = await fetch(`/api/agents/${encodeURIComponent(name)}/memories`);
     if (!res.ok) throw new Error('request failed');
@@ -373,23 +167,11 @@ async function openInspector(name) {
 
 // --- Boot ---
 
-window.addEventListener('DOMContentLoaded', async () => {
-  let locations = {};
-  try {
-    const res = await fetch('/api/locations');
-    locations = await res.json();
-  } catch (err) {
-    console.error('failed to load locations', err);
-  }
-
+window.addEventListener('DOMContentLoaded', () => {
   loadRoster();
 
-  new Phaser.Game({
-    type: Phaser.AUTO,
-    width: WORLD_WIDTH,
-    height: WORLD_HEIGHT,
-    parent: 'gameContainer',
-    backgroundColor: '#7a9b5e',
-    scene: new TownScene(locations),
-  });
+  const container = document.getElementById('gameContainer');
+  village = new VillageWorld(container);
+  village.onClickAgent = openInspector;
+  village.ready();
 });

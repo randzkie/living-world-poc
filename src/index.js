@@ -7,25 +7,37 @@ const { createServer } = require('./server');
 
 const AGENT_SETUP = {
   Mira: {
-    homeLocation: "Cartographer's Stall",
-    color: '#4f9d8a',
+    homeLocation: 'Map Stand',
+    color: '#4caf6a',
     role: 'Map Seller',
+    npcType: 'merchant',
+    texture: 'char-mira',
+    stats: { hp: 120, atk: 18, def: 10 },
+    blurb: 'A curious street vendor who sells old maps. Friendly but nosy.',
     persona:
       'A curious street vendor who sells old maps. Friendly but nosy, always asking questions about strangers.',
   },
   Tomas: {
-    homeLocation: 'The Watchtower',
-    color: '#a24b52',
+    homeLocation: 'Guard Post',
+    color: '#4a7fc4',
     role: 'Town Guard',
+    npcType: 'guard',
+    texture: 'char-tomas',
+    stats: { hp: 150, atk: 22, def: 15 },
+    blurb: 'A tired night guard who has worked this post for 20 years. Gruff, dry humor.',
     persona:
       'A tired night guard who has worked this post for 20 years. Gruff, dry humor, secretly lonely.',
   },
   Elyas: {
-    homeLocation: 'The Weary Boar',
-    color: '#8b6bc4',
+    homeLocation: "Bard's Tent",
+    color: '#8b5cf6',
     role: 'Traveling Bard',
+    npcType: 'bard',
+    texture: 'char-elyas',
+    stats: { hp: 100, atk: 16, def: 8 },
+    blurb: 'A traveling bard collecting local rumors and stories for his next song.',
     persona:
-      'A traveling bard collecting local rumors and stories for his next song. Charming, nosy in a different way than Mira, easily distracted by anything interesting.',
+      'A traveling bard collecting local rumors and stories for his next song. Charming, easily distracted by anything interesting.',
   },
 };
 
@@ -37,6 +49,10 @@ for (const agent of agents) {
   const setup = AGENT_SETUP[agent.name];
   agent.color = setup.color;
   agent.role = setup.role;
+  agent.npcType = setup.npcType;
+  agent.texture = setup.texture;
+  agent.stats = setup.stats;
+  agent.blurb = setup.blurb;
   const pos = LOCATIONS[agent.homeLocation];
   agent.x = pos.x;
   agent.y = pos.y;
@@ -103,6 +119,9 @@ async function runTick(tickNumber, broadcast) {
         x: agent.x,
         y: agent.y,
         color: agent.color,
+        role: agent.role,
+        npcType: AGENT_SETUP[agent.name].npcType,
+        texture: agent.texture,
         location: agent.location,
         action: result.action,
         dialogue: result.dialogue,
@@ -115,6 +134,9 @@ async function runTick(tickNumber, broadcast) {
         x: agent.x,
         y: agent.y,
         color: agent.color,
+        role: agent.role,
+        npcType: AGENT_SETUP[agent.name].npcType,
+        texture: agent.texture,
         location: agent.location,
         action: 'error',
         dialogue: '',

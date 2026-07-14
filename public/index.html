@@ -3,53 +3,54 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Living World</title>
+<title>Living World Village</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link
-  href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Spectral:wght@400;500;600&display=swap"
+  href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Nunito:wght@400;600;700;800&display=swap"
   rel="stylesheet"
 />
 <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <header class="topbar">
-    <div class="brand">
-      <span class="brand-icon">🛡️</span>
-      <div>
-        <h1>Living World</h1>
-        <p class="tagline">A small medieval town of villagers with their own senses and memory</p>
-      </div>
-    </div>
-    <div class="status">
-      <span id="tickCount">tick 0</span>
-      <span id="connDot" class="dot"></span>
-      <span id="connLabel">connecting…</span>
-    </div>
-  </header>
+  <div class="app-shell">
+    <aside class="roster-sidebar">
+      <div class="panel-banner">Characters</div>
+      <div id="roster" class="roster-list"></div>
+    </aside>
 
-  <main class="layout">
-    <div id="gameContainer" class="stage"></div>
+    <section class="map-section">
+      <div class="map-header">
+        <div class="panel-banner panel-banner--wide">The Village Map</div>
+        <div class="status">
+          <span id="tickCount">tick 0</span>
+          <span id="connDot" class="dot"></span>
+          <span id="connLabel">connecting…</span>
+        </div>
+      </div>
+      <div id="gameContainer" class="stage"></div>
+    </section>
+
     <aside id="inspector" class="inspector">
-      <div class="inspector-empty">
-        <span class="inspector-icon">👁️</span>
-        Click a villager to see their thoughts, plan, and memories.
+      <div class="panel-banner">Villager Mind</div>
+      <div class="inspector-body" id="inspector-body">
+        <div class="inspector-empty">
+          <span class="inspector-icon">👁️</span>
+          Click a villager on the map or in the roster to read their thoughts.
+        </div>
       </div>
     </aside>
-  </main>
+  </div>
 
   <section class="chronicle-panel">
-    <h2>Village Chronicle</h2>
+    <div class="panel-banner panel-banner--wide">Village Chronicle</div>
     <ul id="chronicle" class="chronicle-list">
       <li class="chronicle-empty">Waiting for the first events…</li>
     </ul>
   </section>
 
-  <section class="roster-panel">
-    <h2>Townsfolk</h2>
-    <div id="roster" class="roster-grid"></div>
-  </section>
-
-  <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+  <script src="characters3d.js"></script>
+  <script src="villageScene.js"></script>
   <script src="main.js"></script>
 </body>
 </html>

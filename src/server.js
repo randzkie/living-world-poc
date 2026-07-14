@@ -19,7 +19,19 @@ function createServer(agents) {
   });
 
   app.get('/api/agents', (req, res) => {
-    res.json(agents.map((a) => ({ name: a.name, persona: a.persona, color: a.color })));
+    res.json(
+      agents.map((a) => ({
+        name: a.name,
+        persona: a.persona,
+        color: a.color,
+        role: a.role,
+        location: a.location,
+        npcType: a.npcType,
+        texture: a.texture,
+        stats: a.stats,
+        blurb: a.blurb,
+      }))
+    );
   });
 
   // On-demand detail for the inspector panel — not pushed every tick, only
@@ -35,6 +47,7 @@ function createServer(agents) {
       res.json({
         name: agent.name,
         persona: agent.persona,
+        role: agent.role,
         plan: agent.currentPlan,
         location: agent.location,
         memories: rows.map((m) => ({ type: m.type, content: m.content, createdAt: m.created_at })),
